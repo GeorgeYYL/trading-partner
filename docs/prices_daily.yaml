@@ -1,0 +1,48 @@
+# libs/contracts/prices_daily.yaml
+name: prices_daily
+owner: trading-partner
+contract_level: clean
+storage: clickhouse.prices_daily
+update_frequency: daily
+
+schema:
+  - name: symbol
+    type: string
+    required: true
+    description: Stock ticker
+  - name: date
+    type: date
+    required: true
+  - name: open
+    type: float
+    required: true
+    min: 0
+  - name: high
+    type: float
+    required: true
+    min: 0
+  - name: low
+    type: float
+    required: true
+    min: 0
+  - name: close
+    type: float
+    required: true
+    min: 0
+  - name: volume
+    type: int
+    required: true
+    min: 0
+  - name: job_status
+    type: enum
+    required: true
+    allowed_values: [SUCCESS, FAILED, PARTIAL]
+  - name: ingested_at
+    type: datetime
+    required: true
+
+quality_rules:
+  - name: unique_key
+    condition: "unique(symbol, date)"
+  - name: valid_status
+    condition: "job_status == 'SUCCESS'"

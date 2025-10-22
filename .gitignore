@@ -1,0 +1,36 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.log
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+
+# --- Data files (按需放开/加严) ---
+data/**/*.parquet
+data/**/*.csv
+data/**/*.xlsx
+data/**/*.json
+
+# --- Caches ---
+.cache/
+pytest_cache/
+.ipynb_checkpoints/
+
+# --- Assistant artifacts ---
+_assistant/snapshot.md
+_assistant/tmp/

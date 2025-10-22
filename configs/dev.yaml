@@ -1,0 +1,26 @@
+ENV: DEV
+LOG_LEVEL: INFO
+CLICKHOUSE:
+HOST: clickhouse
+PORT: 8123
+USER: default
+PASSWORD: ""
+DATABASE: market
+S3:
+ENDPOINT_URL: http://minio:9000
+ACCESS_KEY: minioadmin
+SECRET_KEY: minioadmin
+BUCKET_RAW: raw
+BUCKET_CLEAN: clean
+POSTGRES:
+HOST: postgres
+PORT: 5432
+USER: postgres
+PASSWORD: postgres
+DATABASE: meta
+API:
+HOST: 0.0.0.0
+PORT: 8000
+PREFECT:
+ENABLED: true
+QUEUE: default

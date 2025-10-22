@@ -1,0 +1,26 @@
+# ——— 常见不需要的东西 ———
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.env
+.env.*
+venv/
+.venv/
+
+# 本地数据与临时文件（按需）
+data/
+notebooks/
+
+# ——— 非常关键：放行需要进入镜像的内容 ———
+!pyproject.toml
+!poetry.lock
+!apps/
+!libs/
+!configs/
+!infra/

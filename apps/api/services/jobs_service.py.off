@@ -1,0 +1,134 @@
+# apps/api/services/jobs_service.py
+"""
+JobsService — orchestration layer (no real logic)
+
+This service glues API routes to system adapters, following the service contract:
+docs/service-contracts/queue-and-repo.md
+
+Responsibilities:
+- Enqueue daily_pipeline jobs with idempotency
+- Expose job status lookup for GET /jobs/{id}
+- Provide readiness info for /ready by probing queue & repo
+
+It depends ONLY on abstract adapters:
+- libs.adapters.queue.QueueAdapter
+- libs.adapters.repo.JobRepoAdapter
+
+Implementation notes:
+- This file contains NO real infra logic. It coordinates steps and delegates to adapters.
+- Replace TODO blocks with concrete calls when adapters are implemented.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Literal, TypedDict, Optional
+
+from libs.contracts.schemas import make_idempotency_key, JobStatus  # data contract
+from libs.adapters.queue import QueueAdapter, QueueUnavailableError, MessageTooLargeError, InvalidMessageError
+from libs.adapters.repo import JobRepoAdapter, RepoUnavailableError
+
+
+# ---- DTOs returned to routers (internal-facing; map to api/schemas externally) ----
+
+class EnqueueResultDTO(TypedDict):
+    job_id: str
+    status: JobStatus  # expected "queued" on success
+    created: bool      # whether a new queued record was created
+
+
+class JobStatusDTO(TypedDict, total=False):
+    job_id: str
+    status: JobStatus
+    attempts: int
+    created_at: str
+    started_at: Optional[str]
+    finished_at: Optional[str]
+    last_error_code: Optional[str]
+    last_error_message: Optional[str]
+    result_ref: Optional[str]
+
+
+class ReadinessDTO(TypedDict):
+    queue: dict
+    repo: dict
+
+
+# ---- Service -----------------------------------------------------------------
+
+@dataclass
+class JobsService:
+    """
+    Orchestration service for job lifecycle.
+
+    Construct via dependency injection (see apps/api/deps.py), for example:
+        service = JobsService(queue=queue_adapter, repo=job_repo_adapter)
+    """
+    queue: QueueAdapter
+    repo: JobRepoAdapter
+
+    # --------- 1) Enqueue daily pipeline -------------------------------------
+
+    def enqueue_daily(
+        self,
+        *,
+        symbol: str,
+        asof: str,
+        requested_by: Literal["api", "scheduler", "manual"] = "api",
+        idempotency_key: str | None = None,
+    ) -> EnqueueResultDTO:
+        """
+        Orchestrate: idempotency → repo.create_queued → queue.enqueue.
+
+        Steps (as per contract §5.1):
+        1) Normalize/validate inputs (symbol upper, asof YYYY-MM-DD, not future)  [data contract]
+        2) Compute idempotency_key if missing: make_idempotency_key("daily_pipeline", symbol, asof)
+        3) Check existing: repo.get_by_idempotency(key)
+            - if exists: return {job_id, status(from repo), created:false}
+        4) Create queued: repo.create_queued(...)
+            - returns {job_id, created:true}
+        5) Build JobMessage (libs.contracts.schemas) and queue.enqueue(message)
+        6) Return {job_id, status="queued", created:true}
+
+        Error mapping (surface to routers):
+        - QueueUnavailableError -> retryable (503 by router)
+        - MessageTooLargeError / InvalidMessageError -> non-retryable (400/422)
+        - RepoUnavailableError -> 503
+        """
+        # TODO: implement the orchestration using adapters.
+        # This is a stub: keep the shape; fill with real calls later.
+        raise NotImplementedError
+
+    # --------- 2) Get job status ---------------------------------------------
+
+    def get_status(self, job_id: str) -> JobStatusDTO:
+        """
+        Fetch job snapshot from repo (contract §4.1) and map to DTO.
+
+        Expected mapping:
+        - timestamps: serialize to ISO string
+        - include attempts, last_error (code/message), result_ref if present
+
+        Errors:
+        - If not found -> raise a domain-specific NotFound (router maps to 404)
+        - RepoUnavailableError -> router maps to 503
+        """
+        # TODO: call self.repo.get_by_id(job_id) and map fields to JobStatusDTO.
+        raise NotImplementedError
+
+    # --------- 3) Readiness probe --------------------------------------------
+
+    def readiness(self) -> ReadinessDTO:
+        """
+        Probe both queue & repo; only when both are ok should /ready return 200.
+
+        Return shape example:
+        {
+          "queue": {"status": "ok", "reason": null},
+          "repo":  {"status": "ok", "reason": null}
+        }
+        Router layer decides HTTP 200/503 based on both statuses.
+        """
+        # TODO: call self.queue.ping() and self.repo.ping() and return both.
+        raise NotImplementedError
