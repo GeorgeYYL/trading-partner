@@ -77,6 +77,3 @@ logs:
 
 contracts-gen:
 	\tpython libs/contracts/generator/gen_pydantic.py
-
-sync:
-	bash sync_code.sh
