@@ -34,3 +34,8 @@ pytest_cache/
 # --- Assistant artifacts ---
 _assistant/snapshot.md
 _assistant/tmp/
+
+# secrets
+.env
+.env.*
+!env.example
