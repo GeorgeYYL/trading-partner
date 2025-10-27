@@ -1,31 +1,35 @@
 # libs/contracts/prices_daily.py
+# ✅ price contrace and validation （L1）
 from datetime import date
-from pydantic import BaseModel, Field, confloat, conint
-from typing import List
-import pandas as pd
+from typing import Iterable, Mapping, List, Union
+from pydantic import BaseModel, Field, ValidationError
 
-class PriceDaily(BaseModel):
-    date: date
-    symbol: str = Field(min_length=1)
-    open: confloat(ge=0)
-    high: confloat(ge=0)
-    low: confloat(ge=0)
-    close: confloat(ge=0)
-    adj_close: confloat(ge=0)
-    volume: conint(ge=0)
+class PriceRow(BaseModel):
+    # a stander recorder(for all layer)
+    date: date                       # trading day in UTC   
+    symbol: str                      # Stock code
+    open: float  = Field(ge=0)       # Open
+    high: float  = Field(ge=0)       # High
+    low: float   = Field(ge=0)       # Low
+    close: float = Field(ge=0)       # Close
+    adj_close: float = Field(ge=0)   # adj_close
+    volume: int = Field(ge=0)        # Volume
 
-def validate_prices_batch(df: pd.DataFrame) -> List[PriceDaily]:
-    records = []
-    for _, row in df.iterrows():
-        record = PriceDaily(
-            date=row["date"],
-            symbol=row["symbol"],
-            open=row["open"],
-            high=row["high"],
-            low=row["low"],
-            close=row["close"],
-            adj_close=row["adj_close"],
-            volume=int(row["volume"]),
-        )
-        records.append(record)
-    return records
+    def business_check(self) -> None:
+        # Business rules：low<=high and close in [min(open,high,low,close), max(...)] 
+        if self.low > self.high:
+            raise ValueError("low > high")
+        lo = min(self.open, self.high, self.low, self.close)
+        hi = max(self.open, self.high, self.low, self.close)
+        if not (lo <= self.close <= hi):
+            raise ValueError("close out of range")
+
+def validate_prices_batch(rows: Iterable[Union[Mapping, PriceRow]]) -> List[PriceRow]:
+    # validate batch：dict -> PriceRow；PriceRow -> reuse with rules
+    out: List[PriceRow] = []
+    for r in rows:
+        item = r if isinstance(r, PriceRow) else PriceRow(**r)  # structure validation
+        item.symbol = item.symbol.upper()                       # symblo normalization
+        item.business_check()                                   # business rules
+        out.append(item)
+    return out

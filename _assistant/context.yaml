@@ -1,0 +1,37 @@
+project:
+  name: trading-partner
+  python: "3.11"
+  entrypoints:
+    - "apps/api/main.py (FastAPI)"
+    - "smoke_fetch.py"
+  run:
+    - "make dev-up"
+    - "uvicorn apps.api.main:app --reload"
+  data_dirs:
+    - "data/prices/"
+  env_keys_required:
+    - "ALPHA_VANTAGE_KEY"
+
+modules:
+  adapters:
+    - "libs/adapters/repo_parquet.py"
+  connectors:
+    - "libs/connectors/yfinance_fetcher.py"
+  contracts:
+    - "libs/contracts/prices_daily.py"
+  services:
+    - "apps/api/services/prices_ingestion.py"
+  routers:
+    - "apps/api/routers/prices.py"
+
+focus_this_week:
+  goals:
+    - "GET /prices?symbol=... 接口可用"
+    - "完善 PricesIngestionService 依赖注入"
+  review_targets:
+    - "apps/api/services/prices_ingestion.py"
+    - "apps/api/routers/prices.py"
+
+tests:
+  smoke:
+    - "python smoke_fetch.py AAPL"

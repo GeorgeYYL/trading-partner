@@ -1,6 +1,6 @@
 from pathlib import Path
 import pandas as pd
-from libs.contracts.prices_daily import PriceDaily
+from libs.contracts.prices_daily import PriceRow
 from libs.adapters.repo import PricesRepoAdapter
 
 class PricesRepoParquet(PricesRepoAdapter):
@@ -8,7 +8,7 @@ class PricesRepoParquet(PricesRepoAdapter):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
-    def upsert_prices(self, rows: list[PriceDaily]) -> tuple[int, int]:
+    def upsert_prices(self, rows: list[PriceRow]) -> tuple[int, int]:
         df_new = pd.DataFrame([r.model_dump() for r in rows])
         if not self.path.exists():
             df_new.to_parquet(self.path, index=False)
@@ -23,9 +23,9 @@ class PricesRepoParquet(PricesRepoAdapter):
         merged.to_parquet(self.path, index=False)
         return (inserted, 0)
 
-    def get_prices(self, symbol: str, limit: int = 30) -> list[PriceDaily]:
+    def get_prices(self, symbol: str, limit: int = 30) -> list[PriceRow]:
         if not self.path.exists():
             return []
         df = pd.read_parquet(self.path)
         df = df[df["symbol"] == symbol].sort_values("date", ascending=False).head(limit)
-        return [PriceDaily(**row) for row in df.to_dict(orient="records")]
+        return [PriceRow(**row) for row in df.to_dict(orient="records")]

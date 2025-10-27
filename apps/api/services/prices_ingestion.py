@@ -5,14 +5,14 @@ from time import perf_counter
 import structlog
 
 from libs.connectors.base import FetcherPort           # ✅ 依赖接口，不依赖具体 yfinance
-from libs.adapters.repo import PricesRepoAdapter     # ✅ 依赖仓储接口
-from libs.contracts.prices_daily import validate_prices_batch
+from libs.adapters.repo_parquet import PricesRepoParquet     # ✅ 依赖仓储接口
+from libs.contracts.prices_daily import validate_prices_batch, PriceRow
 
 
 class PricesIngestionService:
     def __init__(
         self,
-        repo: PricesRepoAdapter,
+        repo: PricesRepoParquet,
         fetcher: FetcherPort,
         logger=None,
         clock=perf_counter,
@@ -33,8 +33,8 @@ class PricesIngestionService:
         sym = symbol.upper().strip()
         t0 = self.clock()
 
-        df = self.fetcher.fetch_daily(sym)   # ✅ 不关心具体来源，由 fetcher 实现
-        if df.empty:
+        rows = self.fetcher.fetch_daily(sym)   # ✅ 不关心具体来源，由 fetcher 实现
+        if not rows:
             duration_ms = int((self.clock() - t0) * 1000)
             self.log.info(
                 "ingest.empty",
@@ -45,7 +45,7 @@ class PricesIngestionService:
             )
             return {"symbol": sym, "rows": 0, "inserted": 0, "updated": 0}
 
-        rows = validate_prices_batch(df)     # 契约校验失败 → 让异常冒泡给上层
+        rows = validate_prices_batch(rows)     # 契约校验失败 → 让异常冒泡给上层
         inserted, updated = self.repo.upsert_prices(rows)
 
         duration_ms = int((self.clock() - t0) * 1000)

@@ -11,7 +11,7 @@ _REGISTRY = {
 }
 
 FetchSource = Literal["yfinance"]              # 以后加: "alpaca", "polygon" ...
-FetcherFn = Callable[[str], pd.DataFrame]
+FetcherFn = Callable[[str], list]
 
 def get_prices_fetcher(source: FetchSource = "yfinance") -> FetcherFn:
     if source == "yfinance":

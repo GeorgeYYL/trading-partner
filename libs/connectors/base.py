@@ -1,10 +1,10 @@
 from __future__ import annotations
 from typing import Protocol, runtime_checkable
 from datetime import date
-import pandas as pd
+from libs.contracts.prices_daily import PriceRow
 
 class PricesFetcher(Protocol):
-    def fetch_last_1y_daily(self, symbol: str) -> pd.DataFrame: ...
+    def fetch_last_1y_daily(self, symbol: str) -> list[PriceRow]: ...
 
 
 @runtime_checkable
@@ -32,5 +32,5 @@ class FetcherPort(Protocol):
         symbol: str,
         date_from: date | None = None,
         date_to: date | None = None,
-    ) -> pd.DataFrame:
+    ) -> list[PriceRow]:
         ...

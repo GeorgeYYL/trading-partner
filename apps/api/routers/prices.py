@@ -1,6 +1,7 @@
 # apps/api/routers/prices.py
 from fastapi import APIRouter, Query
 from apps.api.services.prices_ingestion import PricesIngestionService
+from libs.adapters.repo_parquet import PricesRepoParquet
 
 router = APIRouter(prefix="/prices", tags=["prices"])
 

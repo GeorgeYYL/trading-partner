@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, List
 import pandas as pd
 from pandas.api.types import is_numeric_dtype, is_float_dtype
 import yfinance as yf
-
+from libs.contracts.prices_daily import PriceRow, validate_prices_batch
 from .base import FetcherPort
 
 
@@ -38,7 +38,7 @@ class YFinanceFetcher(FetcherPort):
         symbol: str,
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
-    ) -> pd.DataFrame:
+    ) -> List[PriceRow]:
         sym = symbol.upper().strip()
         if not sym:
             raise ValueError("symbol must be non-empty")
@@ -86,11 +86,23 @@ class YFinanceFetcher(FetcherPort):
                 df[c] = pd.NA
         df = df[cols].sort_values("date").reset_index(drop=True)
 
-        if df.empty:
-            # 理论上不会，因为我们用闭区间并加了 end+1；但保险起见
-            raise RuntimeError(f"No rows in range for {sym!r} [{date_from}..{date_to}]")
+        # 契约验证（df -> list[dict] -> DTO 校验）
+        rows_as_dict = [
+            {
+                "date": r.date,
+                "symbol": r.symbol,
+                "open": float(r.open) if pd.notna(r.open) else 0.0,        # 这里决定 NA 策略：兜底或报错
+                "high": float(r.high) if pd.notna(r.high) else 0.0,
+                "low":  float(r.low)  if pd.notna(r.low)  else 0.0,
+                "close": float(r.close) if pd.notna(r.close) else 0.0,
+                "adj_close": float(r.adj_close) if pd.notna(r.adj_close) else float(r.close or 0.0),
+                "volume": int(r.volume) if pd.notna(r.volume) else 0,
+            }
+            for r in df.itertuples(index=False)
+        ]
+        validated = validate_prices_batch(rows_as_dict)
 
-        return df
+        return validated
 
     # ---- 辅助函数：保持小而清晰 ----
     @staticmethod
