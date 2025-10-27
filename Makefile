@@ -67,13 +67,16 @@ test:
 precommit-install:
 	@poetry run pre-commit install
 ps:
-\tdocker compose -f infra/docker/docker-compose.yml ps
+	\tdocker compose -f infra/docker/docker-compose.yml ps
 
 up:
-\tdocker compose -f infra/docker/docker-compose.yml up -d --build api
+	\tdocker compose -f infra/docker/docker-compose.yml up -d --build api
 
 logs:
-\tdocker compose -f infra/docker/docker-compose.yml logs -f --tail=100 api
+	\tdocker compose -f infra/docker/docker-compose.yml logs -f --tail=100 api
 
 contracts-gen:
-\tpython libs/contracts/generator/gen_pydantic.py
+	\tpython libs/contracts/generator/gen_pydantic.py
+
+sync:
+	bash sync_code.sh
