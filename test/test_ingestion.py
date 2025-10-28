@@ -1,7 +1,7 @@
 # test/test_ingestion.py
 import pandas as pd
 from datetime import date
-from libs.adapters.repo_parquet import PricesRepoParquet
+from libs.adapters.repo_parquet_partitioned import PricesRepoParquetPartitioned
 from apps.api.services.prices_ingestion import PricesIngestionService
 
 def fake_fetch(_symbol: str) -> pd.DataFrame:
@@ -11,7 +11,8 @@ def fake_fetch(_symbol: str) -> pd.DataFrame:
     ])
 
 def test_ingest_idempotency(tmp_path):
-    repo = PricesRepoParquet(tmp_path/"prices.parquet")
+    # Use partitioned repo with temporary directory
+    repo = PricesRepoParquetPartitioned(layer="silver", base_dir=tmp_path)
     svc = PricesIngestionService(repo=repo, fetch_fn=fake_fetch)
 
     r1 = svc.ingest_last_1y("AAPL")

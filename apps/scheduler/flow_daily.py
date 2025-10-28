@@ -68,8 +68,9 @@ def upsert_clickhouse(df: pd.DataFrame) -> None:
 
 @task
 def export_csv(df: pd.DataFrame, symbol: str) -> str:
-    out = f"/data/reports/{symbol}_daily_report.csv"
-    os.makedirs("/data/reports", exist_ok=True)
+    # Use lakehouse gold layer for reports
+    out = f"data/gold/reports/{symbol}_daily_report.csv"
+    os.makedirs("data/gold/reports", exist_ok=True)
     df.to_csv(out, index=False)
     return out
 

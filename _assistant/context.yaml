@@ -8,13 +8,18 @@ project:
     - "make dev-up"
     - "uvicorn apps.api.main:app --reload"
   data_dirs:
-    - "data/prices/"
+    - "data/bronze/"  # Raw data from sources
+    - "data/silver/"  # Cleaned, validated data
+    - "data/gold/"    # Aggregated, business-ready data
+    - "data/_metadata/"  # Manifests and metadata
   env_keys_required:
     - "ALPHA_VANTAGE_KEY"
 
 modules:
   adapters:
-    - "libs/adapters/repo_parquet.py"
+    - "libs/adapters/repo_parquet_partitioned.py"  # Lakehouse partitioned storage
+  storage:
+    - "libs/storage/lakehouse_paths.py"  # Centralized path management
   connectors:
     - "libs/connectors/yfinance_fetcher.py"
   contracts:
@@ -26,11 +31,14 @@ modules:
 
 focus_this_week:
   goals:
-    - "GET /prices?symbol=... 接口可用"
+    - "✅ Lakehouse architecture with partitioned parquet storage"
+    - "✅ GET /prices?symbol=... 接口可用"
+    - "✅ POST /prices/jobs/daily/range for date range ingestion"
     - "完善 PricesIngestionService 依赖注入"
   review_targets:
     - "apps/api/services/prices_ingestion.py"
     - "apps/api/routers/prices.py"
+    - "libs/adapters/repo_parquet_partitioned.py"
 
 tests:
   smoke:

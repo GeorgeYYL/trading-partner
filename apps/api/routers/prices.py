@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Query, Depends
 from apps.api.deps import get_ingestion_service
 from apps.api.services.prices_ingestion import PricesIngestionService
-from libs.adapters.repo_parquet import PricesRepoParquet
+from libs.adapters.repo_parquet_partitioned import PricesRepoParquetPartitioned
 
 router = APIRouter(prefix="/prices", tags=["prices"])
 
@@ -29,6 +29,6 @@ def run_ingest(
 
 @router.get("/daily")
 def get_prices(symbol: str, limit: int = 30):
-    repo = PricesRepoParquet()
+    repo = PricesRepoParquetPartitioned()
     rows = repo.get_prices(symbol, limit)
     return [r.model_dump() for r in rows]
