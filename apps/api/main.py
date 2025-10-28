@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from libs.observability.logging import setup_logging
 from apps.api.routers import health, prices
 from fastapi.responses import HTMLResponse, RedirectResponse
+from apps.api.routers.dev import router as dev_router
 
 app = FastAPI(title="trading-partner API")
 setup_logging()
@@ -21,3 +22,4 @@ def healthz():
 
 app.include_router(health.router)
 app.include_router(prices.router)
+app.include_router(dev_router)

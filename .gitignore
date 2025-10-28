@@ -21,6 +21,7 @@ Thumbs.db
 .idea/
 
 # --- Data files (按需放开/加严) ---
+data/
 data/**/*.parquet
 data/**/*.csv
 data/**/*.xlsx
@@ -35,7 +36,12 @@ pytest_cache/
 _assistant/snapshot.md
 _assistant/tmp/
 
-# secrets
+# secrets & docs
+docs/
 .env
 .env.*
 !env.example
+
+#test scripts
+scripts/
+test/

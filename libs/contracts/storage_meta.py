@@ -1,28 +1,58 @@
-from __future__ import annotations  # 兼容前向注解
-from pydantic import BaseModel, Field, field_validator  # 轻量数据校验
-from datetime import datetime, timezone  # 统一UTC时间
+# libs/contracts/storage_meta.py
+from __future__ import annotations
+from enum import StrEnum
+from uuid import uuid4
+from datetime import datetime, timezone
+from typing import List
+from pydantic import BaseModel, Field, field_validator, model_validator
+from libs.contracts.job_models import StorageEngine, DataSource, WriteMode
 
+# -------- repo contract --------
 class StorageReport(BaseModel):
-    engine: str = Field(..., min_length=1)              # 存储引擎：parquet/clickhouse/postgres
-    location: str = Field(..., min_length=1)            # 存储位置：文件路径或表名
-    source: str = Field(..., min_length=1)              # 数据来源：如 yfinance/alpaca
-    symbol: str = Field(..., min_length=1)              # 主维度：本批处理的股票代码
-    rows: int = Field(..., ge=0)                        # 本次处理的记录数
-    inserted: int = Field(0, ge=0)                      # 插入条数
-    updated: int = Field(0, ge=0)                       # 更新条数
-    ts: datetime = Field(default_factory=lambda:         # 回执生成时间（UTC）
-                         datetime.now(timezone.utc))
+    """存储回执契约：描述一次存储写入的结构与统计"""
+    run_id: str = Field(default_factory=lambda: uuid4().hex)
+    idempotency_key: str | None = None
+    engine: StorageEngine
+    source: DataSource
+    location: str = Field(..., min_length=1)
+    symbol: str = Field(..., min_length=1)
+    primary_key: List[str] = Field(default_factory=lambda: ["symbol", "date"])
+    layout_version: int = 1
+    write_mode: WriteMode = WriteMode.UPSERT
+    rows: int = Field(..., ge=0)
+    inserted: int = Field(0, ge=0)
+    updated: int = Field(0, ge=0)
+    skipped: int = Field(0, ge=0)
+    ts: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    @field_validator("symbol")
+    # -------- validator --------
+    @field_validator("symbol", mode="before")
     @classmethod
-    def norm_symbol(cls, v: str) -> str:                # 统一symbol为大写
-        return v.upper()
+    def norm_symbol(cls, v: str) -> str:
+        """统一symbol为大写，去空格"""
+        s = str(v).strip().upper()
+        if not s:
+            raise ValueError("symbol 不能为空")
+        return s
 
-    @field_validator("updated")
+    @field_validator("ts", mode="after")
     @classmethod
-    def check_counts(cls, v: int, info):                # 计数关系校验：inserted+updated<=rows
-        rows = info.data.get("rows", 0)
-        ins = info.data.get("inserted", 0)
-        if ins + v > rows:
-            raise ValueError("inserted + updated 不能大于 rows")
+    def ensure_utc(cls, v: datetime) -> datetime:
+        """utc timezone"""
+        if v.tzinfo is None or v.utcoffset() is None:
+            raise ValueError("ts 必须为带时区的 UTC 时间")
+        if v.utcoffset().total_seconds() != 0:
+            raise ValueError("ts 必须为 UTC 时区")
         return v
+
+    # -------- model validator --------
+    @model_validator(mode="after")
+    def check_counts(self):
+        """严格计数关系: rows == inserted + updated + skipped"""
+        total = self.inserted + self.updated + self.skipped
+        if self.rows != total:
+            raise ValueError(f"rows({self.rows}) 必须等于 inserted+updated+skipped({total})")
+        return self
+
+
+
